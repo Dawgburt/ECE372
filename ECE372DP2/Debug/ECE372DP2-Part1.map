@@ -1,0 +1,132 @@
+******************************************************************************
+                  TI ARM Linker PC v18.1.4                     
+******************************************************************************
+>> Linked Thu Mar 16 11:22:10 2023
+
+OUTPUT FILE NAME:   <ECE372DP2-Part1.out>
+ENTRY POINT SYMBOL: "_c_int00"  address: 000001c0
+
+
+MEMORY CONFIGURATION
+
+         name            origin    length      used     unused   attr    fill
+----------------------  --------  ---------  --------  --------  ----  --------
+  RAM                   00000020   ffffffe0  00000a10  fffff5d0  RWIX
+
+
+SEGMENT ALLOCATION MAP
+
+run origin  load origin   length   init length attrs members
+----------  ----------- ---------- ----------- ----- -------
+00000020    00000020    00000210   00000210    r-x
+  00000020    00000020    00000210   00000210    r-x .text
+00000230    00000230    00000800   00000000    rw-
+  00000230    00000230    00000800   00000000    rw- .stack
+
+
+SECTION ALLOCATION MAP
+
+ output                                  attributes/
+section   page    origin      length       input sections
+--------  ----  ----------  ----------   ----------------
+.text      0    00000020    00000210     
+                  00000020    00000138     main.obj (.text)
+                  00000158    00000068     rtsv4_A_be_eabi.lib : autoinit.c.obj (.text:__TI_auto_init_nobinit_nopinit:__TI_auto_init_nobinit_nopinit)
+                  000001c0    0000003c                         : boot_non_cortex_m.asm.obj (.text)
+                  000001fc    00000020                         : args_main.c.obj (.text:_args_main)
+                  0000021c    00000008                         : pre_init.c.obj (.text:_system_pre_init)
+                  00000224    00000008                         : exit.c.obj (.text:abort:abort)
+                  0000022c    00000004                         : mpu_init.c.obj (.text:__mpu_init)
+
+.init_array 
+*          0    00000020    00000000     UNINITIALIZED
+
+.stack     0    00000230    00000800     UNINITIALIZED
+                  00000230    00000800     --HOLE--
+
+MODULE SUMMARY
+
+       Module                      code   ro data   rw data
+       ------                      ----   -------   -------
+    .\
+       main.obj                    312    0         0      
+    +--+---------------------------+------+---------+---------+
+       Total:                      312    0         0      
+                                                           
+    C:\ti\ccsv8\tools\compiler\ti-cgt-arm_18.1.4.LTS\lib\rtsv4_A_be_eabi.lib
+       autoinit.c.obj              104    0         0      
+       boot_non_cortex_m.asm.obj   60     0         0      
+       args_main.c.obj             32     0         0      
+       exit.c.obj                  8      0         0      
+       pre_init.c.obj              8      0         0      
+       mpu_init.c.obj              4      0         0      
+    +--+---------------------------+------+---------+---------+
+       Total:                      216    0         0      
+                                                           
+       Stack:                      0      0         2048   
+    +--+---------------------------+------+---------+---------+
+       Grand Total:                528    0         2048   
+
+
+GLOBAL SYMBOLS: SORTED ALPHABETICALLY BY Name 
+
+address   name                          
+-------   ----                          
+00000224  C$$EXIT                       
+000000a4  INIT_TRANSFER_I2C             
+000000e8  TRANSMIT_DATA_I2C             
+00000a30  __STACK_END                   
+00000800  __STACK_SIZE                  
+UNDEFED   __TI_CINIT_Base               
+UNDEFED   __TI_CINIT_Limit              
+UNDEFED   __TI_Handler_Table_Base       
+UNDEFED   __TI_Handler_Table_Limit      
+00000158  __TI_auto_init_nobinit_nopinit
+ffffffff  __TI_pprof_out_hndl           
+ffffffff  __TI_prof_data_size           
+ffffffff  __TI_prof_data_start          
+00000020  __TI_static_base__            
+ffffffff  __binit__                     
+ffffffff  __c_args__                    
+0000022c  __mpu_init                    
+00000230  __stack                       
+000001fc  _args_main                    
+000001c0  _c_int00                      
+UNDEFED   _system_post_cinit            
+0000021c  _system_pre_init              
+00000224  abort                         
+ffffffff  binit                         
+00000020  main                          
+
+
+GLOBAL SYMBOLS: SORTED BY Symbol Address 
+
+address   name                          
+-------   ----                          
+00000020  __TI_static_base__            
+00000020  main                          
+000000a4  INIT_TRANSFER_I2C             
+000000e8  TRANSMIT_DATA_I2C             
+00000158  __TI_auto_init_nobinit_nopinit
+000001c0  _c_int00                      
+000001fc  _args_main                    
+0000021c  _system_pre_init              
+00000224  C$$EXIT                       
+00000224  abort                         
+0000022c  __mpu_init                    
+00000230  __stack                       
+00000800  __STACK_SIZE                  
+00000a30  __STACK_END                   
+ffffffff  __TI_pprof_out_hndl           
+ffffffff  __TI_prof_data_size           
+ffffffff  __TI_prof_data_start          
+ffffffff  __binit__                     
+ffffffff  __c_args__                    
+ffffffff  binit                         
+UNDEFED   __TI_CINIT_Base               
+UNDEFED   __TI_CINIT_Limit              
+UNDEFED   __TI_Handler_Table_Base       
+UNDEFED   __TI_Handler_Table_Limit      
+UNDEFED   _system_post_cinit            
+
+[25 symbols]

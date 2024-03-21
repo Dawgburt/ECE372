@@ -1,0 +1,282 @@
+ARM GAS  C:\Users\pnevi\AppData\Local\Temp\ccPvy5QL.s 			page 1
+
+
+   1              	# 1 "../372-DP1-Part3.s"
+   1              	@Phil Nevins
+   0              	
+   0              	
+   0              	
+   2              	@ECE 371 Microprocessor
+   3              	@Design Project 2, Part 2
+   4              	@This program will use a pushbutton to trigger an interrupt and cycle an LED
+   5              	@The program will do this exactly: push button, LED Cyclone on, push button,
+   6              	@LED cyclone off, push button, LED cyclone on...The cyclone will start
+   7              	@where it was interrupted at
+   8              	@Program uses R0-R5
+   9              	
+  10              	.text
+  11              	.global _start
+  12              	.global INT_DIRECTOR
+  13              	
+  14              	_start:
+  15              	
+  16 0000 40D29FE5 	LDR R13, =STACK1		@Point to base of STACK1 for SVC mode
+  17 0004 01DA8DE2 	ADD R13, R13, #0x1000	@Point to top of STACK1
+  18 0008 120002F1 	CPS #0x12				@Switch to IRQ mode
+  19 000c 38D29FE5 	LDR R13, =STACK2		@Point to IRQ STACK2
+  20 0010 01DA8DE2 	ADD R13, R13, #0x1000	@Point to top of STACK2
+  21 0014 130002F1 	CPS #0x13				@Back to SVC mode
+  22              	
+  23              	@Turn on GPIO1 CLK
+  24 0018 0200A0E3 	MOV R0, #0x02			@Value to enable CLK for GPIO module
+  25 001c 2C129FE5 	LDR R1, =0x44E000AC		@ADDR OF CM_PER_GPIO1_CLKCTRL Register
+  26 0020 000081E5 	STR R0, [R1]			@Write #02 to register
+  27 0024 28029FE5 	LDR R0, =0x4804C000		@Base ADDR for GPIO1 Registers
+  28              	
+  29              	@Detect Falling Edge on GPIO1_3 and eable to assert POINTRPEND1
+  30 0028 531F80E2 	ADD R1, R0, #0x14C		@R1 = ADDR of GPIO1_FALLINGDETECT Register
+  31 002c 0820A0E3 	MOV R2, #0x00000008		@Load value for Bit 3 (GPIO1_3)
+  32 0030 003091E5 	LDR R3, [R1]			@Read GPIO1_FALLINGDETECT register
+  33 0034 023083E1 	ORR R3, R3, R2			@Modify (set bit 3)
+  34 0038 003081E5 	STR R3, [R1]			@Write back
+  35 003c 341080E2 	ADD R1, R0, #0x34 		@Addr of GPIO1_IRQSTATUS_SET_0 Register
+  36 0040 002081E5 	STR R2, [R1]			@Enable GPIO1_3 request on POINTRPEND1
+  37              	
+  38              	@Initialize INTC
+  39 0044 0C129FE5 	LDR R1, =0x48200000		@Base Addr for INTC
+  40 0048 0220A0E3 	MOV R2, #0x2			@Value to reset INTC
+  41 004c 102081E5 	STR R2, [R1,#0x10]		@Write to INTC Config Register
+  42 0050 2020A0E3 	MOV R2, #0x20			@Unmask INTC INT 69, Timer3 interrupt
+  43 0054 C82081E5 	STR R2, [R1, #0xC8]		@Write to INTC_MIR_CLEAR_2 register
+  44 0058 0420A0E3 	MOV R2, #0x04			@Value to unmask INTC INT 98, GPIONT1A
+  45 005c E82081E5 	STR R2, [R1, #0xE8]		@Write to INTC_MIR_CLEAR3 Register
+  46              	
+  47              	@Turn on Timer3 CLK
+  48 0060 0220A0E3 	MOV R2, #0x2			@Value to enable Timer3 CLK
+  49 0064 F0119FE5 	LDR R1, =0x44E00084		@Addr of CM_PER_TIMER3_CLKCTRL
+  50 0068 002081E5 	STR R2, [R1]			@Turn on
+  51 006c EC119FE5 	LDR R1, =0x44E0050C		@Addr of CLKSEL_TIMER3_CLK Register**
+  52 0070 002081E5 	STR R2, [R1]			@Select 32 KHz CLK for Timer3
+  53              	
+ARM GAS  C:\Users\pnevi\AppData\Local\Temp\ccPvy5QL.s 			page 2
+
+
+  54              	@Initiliaze Timer3 Registers, with count, overflow, interrupt generation
+  55 0074 E8119FE5 	LDR R1, =0x48042000		@Base addr for timer3 registers
+  56 0078 0120A0E3 	MOV R2, #0x1			@Value to reset timer3
+  57 007c 102081E5 	STR R2, [R1, #0x10]		@Write to Timer3 CFG register
+  58 0080 0220A0E3 	MOV R2, #0x2			@Value to enable overflow interrupt
+  59 0084 2C2081E5 	STR R2, [R1, #0x2C]		@Write to timer3 IRQENABLE_SET
+  60 0088 D8219FE5 	LDR R2, =0xFFFF0000		@Count value for 2 seconds
+  61 008c 402081E5 	STR R2, [R1, #0x40]		@Timer3 TLDR load register (Reload value)
+  62 0090 3C2081E5 	STR R2, [R1, #0x3C]		@Write to Timer3 TCRR count register
+  63              	
+  64              	@Turn on GPIO_1 AUX Functional CLK, Enable DEBOUNCE on GPIO1_3 and Set Time
+  65 0094 B8019FE5 	LDR R0,	=0x4804C000			@Base addr for GPIO1
+  66 0098 B0119FE5 	LDR R1,	=0x44E000AC			@Addr of CM_PER_GPIO1_CLKCTRL
+  67 009c C8219FE5 	LDR R2,	=0x00040002			@Turn on Aux Funct CLK, bit 18 and CLK
+  68 00a0 002081E5 	STR R2,	[R1]				@Write value to CMP_PER_GPIO_CLKCTRL
+  69 00a4 151E80E2 	ADD R1,	R0,	#0x0150			@Addr of GPIO1_DEBOUNCABLE
+  70 00a8 0820A0E3 	MOV R2,	#0x00000008			@Load value of GPIO1 for bit 3
+  71 00ac 002081E5 	STR R2,	[R1]				@Enable GPIO1_3 debounce
+  72 00b0 551F80E2 	ADD R1,	R0,	#0x154			@Addr of GPIO1_DEBOUNCING TIME
+  73 00b4 A020A0E3 	MOV R2,	#0xA0				@Value for 31 Micro-Seconds debounce interval
+  74 00b8 002081E5 	STR R2,	[R1]				@Write to GPIO1_DEBOUNCING TIME
+  75              	
+  76              	@Program GPIO1_21-24 as output
+  77 00bc 1E06E0E3 	LDR R0, =0xFE1FFFFF			@Load word to program GPIO1_21-24 to output
+  78 00c0 A8119FE5 	LDR R1, =0x4804C134			@Addr of GPIO1_OE Register
+  79 00c4 002091E5 	LDR R2, [R1]				@Read GPIO1_OE Register
+  80 00c8 002002E0 	AND R2, R2, R0				@Modify word read in with R0
+  81 00cc 002081E5 	STR R2, [R1]				@Write back to GPIO1_OE Register
+  82              	
+  83              	@Make sure processor IRQ enabled in CPSR
+  84 00d0 00300FE1 	MRS R3, CPSR			@Copy CPSR to R3
+  85 00d4 8030C3E3 	BIC R3, #0x80			@Clear bit 7
+  86 00d8 03F021E1 	MSR CPSR_c, R3			@Write back to CPSR
+  87              	
+  88              	@Turn all LEDs off
+  89 00dc 1E06A0E3 	MOV R0, #0x1E00000		@Load word to target GPIO1_21-24
+  90 00e0 8C119FE5 	LDR R1, =0x4804C190		@Load addr of GPIO1_CLEARDATAOUT
+  91 00e4 000081E5 	STR R0, [R1]			@Write to GPIO1_CLEARDATAOUT (This turns LED1-4 OFF)
+  92              	
+  93              	@Wait for interrupt
+  94 00e8 00F020E3 	WaitLoop: NOP
+  95 00ec FDFFFFEA 			B WaitLoop
+  96              	
+  97              	INT_DIRECTOR:
+  98 00f0 1F402DE9 			STMFD SP!,{R0-R4,LR}		@Push registers onto stack
+  99 00f4 7C019FE5 			LDR R0,=0x482000F8			@Addr of INTC-PENDING_IRQ3
+ 100 00f8 001090E5 			LDR R1,[R0]					@Read INTC-PENDING_IRQ3
+ 101 00fc 040011E3 			TST R1,#0x00000004			@Test bit 2
+ 102 0100 0800000A 			BEQ TCHK					@Not from GPIOINT1A, check if Timer3, Else
+ 103 0104 70019FE5 			LDR R0,=0x4804C02C			@Load addr of GPIO1_IRQSTATUS_0
+ 104 0108 001090E5 			LDR R1,[R0]					@Read Status register to see if button press
+ 105 010c 080011E3 			TST R1,#0x00000008			@Check if bit 3 = 1
+ 106 0110 1400001A 			BNE BUTTON_SVC				@If bit 3 = 1 button is pressed service it
+ 107 0114 64019FE5 			LDR R0,=0x48200048			@Else, Go back. INTC_CONTROL register
+ 108 0118 0110A0E3 			MOV R1,#01					@Value of clear bit 0
+ 109 011c 001080E5 			STR R1,[R0]					@Write to INTC_CONTROL register
+ 110 0120 1F40BDE8 			LDMFD SP!,{R0-R4,LR}		@Restore Registers
+ARM GAS  C:\Users\pnevi\AppData\Local\Temp\ccPvy5QL.s 			page 3
+
+
+ 111 0124 04F05EE2 			SUBS PC,LR,#4				@Pass execution to wait LOOP for now
+ 112              	
+ 113              	TCHK:
+ 114 0128 54119FE5 			LDR R1,=0x482000D8			@Addr of INTC_PENDING_IRQ2 register
+ 115 012c 000091E5 			LDR R0,[R1]					@Read value
+ 116 0130 200010E3 			TST R0,#0x20				@Check if the interrupt from Timer3 (bit 5)
+ 117 0134 0300000A 			BEQ PASS_ON					@No return, Yes check FLAG
+ 118 0138 48119FE5 			LDR R1,=0x48042028			@Addr of Timer3 IRQSTATUS register
+ 119 013c 000091E5 			LDR R0,[R1]					@Read Value
+ 120 0140 020010E3 			TST R0,#0x2					@Check bit 1
+ 121 0144 2A00001A 			BNE LEDFunction				@If overflow, go LEDFunction
+ 122              	
+ 123              	PASS_ON:
+ 124 0148 0210A0E3 			MOV R1,#0x02				@Value to turn Timer3 off
+ 125 014c 34019FE5 			LDR R0,=0x48042028			@Load addr of IRQSTATUS Timer3
+ 126 0150 001080E5 			STR R1,[R0]					@Write to IRQSTATUS Timer3
+ 127              	
+ 128              	@turn off NEWIRQA bit in INTC_CONTROL, so processor can respond to new IRQ
+ 129 0154 24019FE5 			LDR R0,=0x48200048			@Addr of INTC_CONTROL register
+ 130 0158 0110A0E3 			MOV R1,#01					@Value to clear bit 0
+ 131 015c 001080E5 			STR R1,[R0]					@Write to INTC_CONTROL register
+ 132              	
+ 133 0160 1F40BDE8 			LDMFD SP!,{R0-R4,LR}		@Restore Registers
+ 134 0164 04F05EE2 			SUBS PC,LR,#4				@Pass execution to wait LOOP for now
+ 135              	
+ 136              	BUTTON_SVC:
+ 137 0168 0810A0E3 			MOV R1,#0x00000008			@Value turns off GPIO1_3 Interrupt Request
+ 138 016c 001080E5 			STR R1,[R0]					@Write to GPIO1_IRQSTATUS_0 register
+ 139 0170 14219FE5 			LDR R2,=FLAG				@Load pointer to FLAG
+ 140 0174 003092E5 			LDR R3,[R2]					@Load value from FLAG
+ 141 0178 000053E3 			CMP R3,#0x00				@Compare FLAG value to 0
+ 142 017c 0C00000A 			BEQ LEDFunction_ON			@Branch if equal go to LED_TURN_ON
+ 143 0180 FFFFFF1A 			BNE LEDFunction_OFF			@Branch if not equal go to LED_TURN_OFF
+ 144              	
+ 145              	LEDFunction_OFF:
+ 146 0184 0040A0E3 			MOV R4,#0x00				@Value to change FLAG state & Turn off Timer3
+ 147 0188 004082E5 			STR R4,[R2]					@Write to FLAG
+ 148 018c FC209FE5 			LDR R2,=0x48042038			@Load addr to DMTIMER3_TCLR
+ 149 0190 004082E5 			STR R4,[R2]					@Write to DMTIMER3_TCLR to turn timer3 off
+ 150 0194 F8209FE5 			LDR R2,=BUFFER				@Load pointer to BUFFER
+ 151 0198 F8509FE5 			LDR R5,=Current_State		@Load pointer to Current_State
+ 152 019c 003092E5 			LDR R3,[R2]					@Load value from BUFFER
+ 153 01a0 003085E5 			STR R3,[R5]					@Store BUFFER value into Current_State
+ 154 01a4 C8009FE5 			LDR R0,=0x4804C190			@Load addr of GPIO1_CLEARDATAOUT
+ 155 01a8 1E16A0E3 			MOV R1,#0x01E00000			@Value to clear bits 24-21
+ 156 01ac 001080E5 			STR R1,[R0]					@Write to GPIO1_CLEARDATAOUT
+ 157 01b0 0A0000EA 			B BACK						@Branch to BACK
+ 158              	
+ 159              	LEDFunction_ON:
+ 160 01b4 0140A0E3 			MOV R4,#0x01				@Value to change FLAG state
+ 161 01b8 004082E5 			STR R4,[R2]					@Write to FLAG
+ 162 01bc D8009FE5 			LDR R0,=USRLEDCYCLE			@Load pointer to USRLEDCYCLE
+ 163 01c0 D0109FE5 			LDR R1,=Current_State		@Load pointer to Current_State
+ 164 01c4 002091E5 			LDR R2,[R1]					@Load value from Current_State into R2
+ 165 01c8 023090E7 			LDR R3,[R0,R2]				@Add Current_State offset to base addr in USRLEDCYCLE
+ 166 01cc CC409FE5 			LDR R4,=0x4804C194			@Load GPIO1_SETDATAOUT addr
+ 167 01d0 003084E5 			STR R3,[R4]					@Write to GPIO1_SETDATAOUTR register
+ARM GAS  C:\Users\pnevi\AppData\Local\Temp\ccPvy5QL.s 			page 4
+
+
+ 168 01d4 0330A0E3 			MOV R3,#0x3					@Load Value into auto realod and start Timer3
+ 169 01d8 B0409FE5 			LDR R4,=0x48042038			@Load addr for Timer3 TCLR register
+ 170 01dc 003084E5 			STR R3,[R4]					@Write to Timer3 TCLR register
+ 171              	
+ 172              	BACK:
+ 173 01e0 98009FE5 			LDR R0,=0x48200048			@Addr of INTC_CONTROL register
+ 174 01e4 0110A0E3 			MOV R1,#0x01				@Value to enable new IRQ response in INTC
+ 175 01e8 001080E5 			STR R1,[R0]					@Write
+ 176 01ec 1F40BDE8 			LDMFD SP!,{R0-R4,LR}		@Restore Registers
+ 177 01f0 04F05EE2 			SUBS PC,LR,#4				@Return from IRQ interrupt
+ 178              	
+ 179              	LEDFunction:
+ 180              	@Turn off Timer3 interrupt request and enable INTC for next IRQ request
+ 181 01f4 8C109FE5 			LDR R1,=0x48042028			@Load addr of Timer3 IRQSTATUS register
+ 182 01f8 0220A0E3 			MOV R2,#0x2					@Value to reset Timer3 Overflow IRQ request
+ 183 01fc 002081E5 			STR R2,[R1]					@Write
+ 184 0200 94009FE5 			LDR R0,=USRLEDCYCLE			@Load pointer to USRLEDCYCLE
+ 185 0204 88109FE5 			LDR R1,=BUFFER				@Load pointer to BUFFER
+ 186 0208 003091E5 			LDR R3,[R1]					@Load value in BUFFER to increment
+ 187 020c 60209FE5 			LDR R2,=0x4804C190			@Load addr of GPIO1_CLEARDATAOUT
+ 188 0210 034090E7 			LDR R4,[R0,R3]				@Load value of the sum of R3 and R0
+ 189 0214 004082E5 			STR R4,[R2]					@Write to GPIO1_CLEARDATAOUT to turn off LED
+ 190 0218 140053E3 			CMP R3,#20					@Compare value of R3 to 20
+ 191 021c 0030A003 			MOVEQ R3,#0x00				@If R3 = #20 reset value to 0
+ 192 0220 04308342 			ADDMI R3,R3,#04				@If R3 > #20, increment R3 by #04
+ 193 0224 003081E5 			STR R3,[R1]					@Store in BUFFER
+ 194 0228 70209FE5 			LDR R2,=0x4804C194			@Load addr of GPIO1_SETDATAOUT
+ 195 022c 034090E7 			LDR R4,[R0,R3]				@Load R4 with R3 + R0
+ 196 0230 004082E5 			STR R4,[R2]					@Write to GPIO1_SETDATAOUT to turn on next LED
+ 197              	
+ 198              	@turn off NEWIRQA bit in INTC_CONTROL, so processor can respond to new IRQ
+ 199 0234 44009FE5 			LDR R0,=0x48200048			@Addr of INTC_CONTROL register
+ 200 0238 0110A0E3 			MOV R1,#01					@Value to clear bit 0
+ 201 023c 001080E5 			STR R1,[R0]					@Write to INTC_CONTROL register
+ 202              	
+ 203 0240 1F40BDE8 			LDMFD SP!,{R0-R4,LR}		@Restore Registers
+ 204 0244 04F05EE2 			SUBS PC,LR,#4				@Pass execution to wait LOOP for now
+ 205              	
+ 206              	.data
+ 207              	.align 2
+ 208              	
+ 209 0000 00000001 	USRLEDCYCLE: 	.word 0x01000000, 0x00800000, 0x00400000, 0x00200000, 0x00400000, 0x00800000
+ 209      00008000 
+ 209      00004000 
+ 209      00002000 
+ 209      00004000 
+ 210 0018 00000000 	Current_State:  .word 0x0
+ 211 001c 00000000 	BUFFER: 		.word 0x0
+ 212 0020 00000000 	FLAG: 			.word 0x0
+ 213              	
+ 214              	
+ 215              	
+ 216              	STACK1:
+ 217              		.rept 1024
+ 218              		.word 0x0000
+ 219 0024 00000000 		.endr
+ 219      00000000 
+ARM GAS  C:\Users\pnevi\AppData\Local\Temp\ccPvy5QL.s 			page 5
+
+
+ 219      00000000 
+ 219      00000000 
+ 219      00000000 
+ 220              	
+ 221              	STACK2:
+ 222              		.rept 1024
+ 223              		.word 0x0000
+ 224 1024 00000000 		.endr
+ 224      00000000 
+ 224      00000000 
+ 224      00000000 
+ 224      00000000 
+ 225              	
+ 226              	.END
+ARM GAS  C:\Users\pnevi\AppData\Local\Temp\ccPvy5QL.s 			page 6
+
+
+DEFINED SYMBOLS
+  ../372-DP1-Part3.s:14     .text:00000000 _start
+  ../372-DP1-Part3.s:97     .text:000000f0 INT_DIRECTOR
+  ../372-DP1-Part3.s:216    .data:00000024 STACK1
+  ../372-DP1-Part3.s:16     .text:00000000 $a
+  ../372-DP1-Part3.s:221    .data:00001024 STACK2
+  ../372-DP1-Part3.s:94     .text:000000e8 WaitLoop
+  ../372-DP1-Part3.s:113    .text:00000128 TCHK
+  ../372-DP1-Part3.s:136    .text:00000168 BUTTON_SVC
+  ../372-DP1-Part3.s:123    .text:00000148 PASS_ON
+  ../372-DP1-Part3.s:179    .text:000001f4 LEDFunction
+  ../372-DP1-Part3.s:212    .data:00000020 FLAG
+  ../372-DP1-Part3.s:159    .text:000001b4 LEDFunction_ON
+  ../372-DP1-Part3.s:145    .text:00000184 LEDFunction_OFF
+  ../372-DP1-Part3.s:211    .data:0000001c BUFFER
+  ../372-DP1-Part3.s:210    .data:00000018 Current_State
+  ../372-DP1-Part3.s:172    .text:000001e0 BACK
+  ../372-DP1-Part3.s:209    .data:00000000 USRLEDCYCLE
+  ../372-DP1-Part3.s:207    .data:00000000 $d
+  ../372-DP1-Part3.s:226    .text:00000248 $d
+
+NO UNDEFINED SYMBOLS
